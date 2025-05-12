@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ARフォトフレーム</title>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #ar-container { position: relative; width: 100%; height: 100vh; }
+        #snap-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        #screenshot-canvas { display: none; }
+    </style>
+</head>
+<body>
+    <div id="ar-container">
+        <canvas id="ar-canvas"></canvas>
+        <button id="snap-btn">写真を撮る</button>
+        <canvas id="screenshot-canvas"></canvas>
+    </div>
+
+    <script>
+        // ARターゲット画像（認識用の画像）
+        const targetImage = {
+            "imageTargetSrc": "target.png", // 認識用ターゲット画像
+            "metadata": "https://ar-js-org.github.io/AR.js/data/images/hiro.mind"
+        };
+
+        // AR開始関数
+        async function startAR() {
+            const mindarThree = new MindAR.Three.Image({
+                container: document.getElementById("ar-container"),
+                imageTargetSrc: targetImage.imageTargetSrc,
+            });
+
+            const { renderer, scene, camera } = mindarThree;
+            const anchor = mindarThree.addAnchor(0);
+
+            // フォトフレームの作成
+            const frameTexture = new THREE.TextureLoader().load("frame.png");
+            const frameMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(1, 1),
+                new THREE.MeshBasicMaterial({ 
+                    map: frameTexture,
+                    transparent: true
+                })
+            );
+            anchor.group.add(frameMesh);
+
+            // 撮影ボタンの設定
+            document.getElementById("snap-btn").addEventListener("click", () => {
+                takeScreenshot(renderer, camera);
+            });
+
+            await mindarThree.start();
+            renderer.setAnimationLoop(() => {
+                renderer.render(scene, camera);
+            });
+        }
+
+        // スクリーンショットを撮る関数
+        function takeScreenshot(renderer, camera) {
+            const canvas = document.getElementById("screenshot-canvas");
+            canvas.width = renderer.domElement.width;
+            canvas.height = renderer.domElement.height;
+            
+            const context = canvas.getContext('2d');
+            context.drawImage(renderer.domElement, 0, 0);
+            
+            // ダウンロードリンクを作成
+            const link = document.createElement('a');
+            link.download = 'ar-photo.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            alert('写真が保存されました！');
+        }
+
+        // ページ読み込み後にARを開始
+        window.addEventListener('load', startAR);
+    </script>
+</body>
+</html>
